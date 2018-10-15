@@ -17,5 +17,9 @@ then
     exit
 fi
 
+source /etc/kopano/kapid.cfg
+/usr/sbin/kopano-kapid setup
+/usr/sbin/kopano-kapid serve --log-timestamp=false &
+
 source /etc/kopano/grapi.cfg
 exec /usr/sbin/kopano-grapi serve
