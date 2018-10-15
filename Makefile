@@ -6,6 +6,7 @@ docker_pwd := `cat ~/.docker-account-pwd`
 base_version = $(shell docker run --rm $(docker_repo)/kopano_base cat /kopano/buildversion)
 core_version = $(shell docker run --rm $(docker_repo)/kopano_core cat /kopano/buildversion | grep -o -P '(?<=-).*(?=_)')
 webapp_version = $(shell docker run --rm $(docker_repo)/kopano_webapp cat /kopano/buildversion | tail -n 1 | grep -o -P '(?<=-).*(?=\+)')
+rest_version = $(shell docker run --rm $(docker_repo)/kopano_rest-api cat /kopano/buildversion | grep -o -P '(?<=-).*(?=_)')
 
 build-all: build-base build-core build-webapp
 
@@ -20,7 +21,7 @@ tag-base:
 	git tag base/${base_version} || true
 
 build-core: build-base
-	docker build -t $(docker_repo)/kopano_core  core/
+	docker build -t $(docker_repo)/kopano_core core/
 
 tag-core:
 	@echo 'create tag $(core_version)'
@@ -30,7 +31,7 @@ tag-core:
 	git tag core/${core_version} || true
 
 build-webapp: build-base
-	docker build -t $(docker_repo)/kopano_webapp  webapp/
+	docker build -t $(docker_repo)/kopano_webapp webapp/
 
 tag-webapp:
 	@echo 'create tag $(webapp_version)'
@@ -38,6 +39,16 @@ tag-webapp:
 	@echo 'create tag latest'
 	docker tag $(docker_repo)/kopano_webapp $(docker_repo)/kopano_webapp:latest
 	git tag webapp/${webapp_version} || true
+
+build-rest-api: build-rest-api
+	docker build -t $(docker_repo)/kopano_rest-api rest-api/
+
+tag-rest-api:
+	@echo 'create tag $(rest_version)'
+	docker tag $(docker_repo)/kopano_rest-api $(docker_repo)/kopano_rest-api:${rest_version}
+	@echo 'create tag latest'
+	docker tag $(docker_repo)/kopano_rest-api $(docker_repo)/kopano_rest-api:latest
+	git tag rest-api/${rest_version} || true
 
 git-commit:
 	git add -A && git commit -m "ci: commit changes before tagging"
@@ -64,3 +75,8 @@ publish-webapp: build-webapp tag-webapp
 	@echo 'publish latest to $(docker_repo)/kopano_webapp'
 	docker push $(docker_repo)/kopano_webapp:${webapp_version}
 	docker push $(docker_repo)/kopano_webapp:latest
+
+publish-rest-api: build-rest-api tag-rest-api
+	@echo 'publish latest to $(docker_repo)/kopano_rest-api'
+	docker push $(docker_repo)/kopano_rest-api:${rest_version}
+	docker push $(docker_repo)/kopano_rest-api:latest

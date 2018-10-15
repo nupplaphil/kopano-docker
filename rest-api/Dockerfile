@@ -1,0 +1,46 @@
+FROM zokradonh/kopano_base
+
+ARG ADDITIONAL_KOPANO_PACKAGES=""
+ARG DOWNLOAD_COMMUNITY_PACKAGES=1
+ARG KOPANO_CORE_REPOSITORY_URL="file:/kopano/repo/core"
+ARG KOPANO_CORE_VERSION=newest
+ARG KOPANO_REPOSITORY_FLAGS="trusted=yes"
+ARG RELEASE_KEY_DOWNLOAD=0
+
+# install Kopano WebApp and refresh ca-certificates
+RUN \
+    # community download and package as apt source repository
+    # TODO: source or execute repo script?
+    . /kopano/helper/create-kopano-repo.sh && \
+    if [ ${DOWNLOAD_COMMUNITY_PACKAGES} -eq 1 ]; then \
+        dl_and_package_community "core"; \
+    fi; \
+    echo "deb [${KOPANO_REPOSITORY_FLAGS}] ${KOPANO_CORE_REPOSITORY_URL} ./" > /etc/apt/sources.list.d/kopano.list; \
+    # save kopano version if supported kopano
+    if [ ! -f /kopano/buildversion ]; then \
+        echo "core-${KOPANO_CORE_VERSION}" > /kopano/buildversion; \
+    fi; \
+    # install apt key if supported kopano
+    if [ ${RELEASE_KEY_DOWNLOAD} -eq 1 ]; then \
+        curl -s -S -o - "${KOPANO_CORE_REPOSITORY_URL}/Release.key" | apt-key add -; \
+    fi; \
+    # install
+    apt-get update && \
+    set -x && \
+    apt-get install --no-install-recommends -y \
+        kopano-kapid kopano-grapi \
+        ${ADDITIONAL_KOPANO_PACKAGES} && \
+    set +x && \
+    rm -rf /var/cache/apt /var/lib/apt/lists
+
+ENV KOPANO_LOCALE="de_DE.UTF-8"
+ENV KOPANO_USERSCRIPT_LOCALE="de_DE.UTF-8"
+ENV LANG=en_US.UTF-8
+
+ENV SERVICE_TO_START=kapid
+
+COPY start-service.sh /kopano/
+
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
+
+CMD [ "/kopano/start-service.sh" ]
